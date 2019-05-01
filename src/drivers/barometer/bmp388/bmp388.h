@@ -52,7 +52,7 @@
 #define BMP388_ADDR_ID		0x00	/* id */
 
 #define BMP388_VALUE_ID		0x00	/* chip id */
-
+#define BMP388_VALUE_RESET	0xB6	/* soft reset */
 
 
 #define BMP388_STATUS_MEASURING	(1<<3)	/* if in process of measure */

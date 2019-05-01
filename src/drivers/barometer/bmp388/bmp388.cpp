@@ -194,6 +194,7 @@ BMP388::~BMP388()
 int
 BMP388::init()
 {
+	printf("BMP388:init()\n");
 	int ret = CDev::init();
 
 	if (ret != OK) {
@@ -214,11 +215,12 @@ BMP388::init()
 	_class_instance = register_class_devname(BARO_BASE_DEVICE_PATH);
 
 	/* reset sensor */
-	/* TODO need to send a reset command here */
-	/* _interface->set_reg(BMP388_VALUE_RESET, BMP388_ADDR_RESET); */
+	_interface->set_reg(BMP388_VALUE_RESET, BMP388_ADDR_CMD);
 	usleep(10000);
 
 	/* check  id*/
+        int result = _interface->get_reg(BMP388_ADDR_ID);
+	printf("Read chip ID: 0x%02x\n", result);
 	if (_interface->get_reg(BMP388_ADDR_ID) != BMP388_VALUE_ID) {
 		PX4_WARN("id of your baro is not: 0x%02x", BMP388_VALUE_ID);
 		return -EIO;
@@ -561,9 +563,8 @@ struct bmp388_bus_option {
 	{ BMP388_BUS_I2C_EXTERNAL, "/dev/bmp388_i2c_ext", &bmp388_i2c_interface, PX4_I2C_BUS_EXPANSION, PX4_I2C_EXT_OBDEV_BMP388, true, NULL },
 #endif
 #if defined(PX4_SPI_BUS_EXTERNAL1)
-	{ BMP388_BUS_SPI_EXTERNAL, "dev/bmp388_spi_ext", &bmp388_spi_interface, PX4_SPI_BUS_EXTERNAL1, PX4_SPIDEV_EXTERNAL1_1, true, NULL },
+	{ BMP388_BUS_SPI_EXTERNAL, "/dev/bmp388_spi_ext", &bmp388_spi_interface, PX4_SPI_BUS_EXTERNAL1, PX4_SPIDEV_EXTERNAL1_1, true, NULL },
 #endif
-
 
 };
 #define NUM_BUS_OPTIONS (sizeof(bus_options)/sizeof(bus_options[0]))
@@ -588,6 +589,7 @@ start_bus(struct bmp388_bus_option &bus)
 		exit(1);
 	}
 
+	printf("Constructing SPI interface on bus %d (busid: %d)\n", bus.busnum, bus.busid);
 	bmp388::IBMP388 *interface = bus.interface_constructor(bus.busnum, bus.device, bus.external);
 
 	if (interface->init() != OK) {
@@ -596,13 +598,16 @@ start_bus(struct bmp388_bus_option &bus)
 		return false;
 	}
 
+	printf("Creating BMP388 instance\n");
 	bus.dev = new BMP388(interface, bus.devpath);
 
 	if (bus.dev == nullptr) {
+		printf("ERROR- bus.dev = NULL\n");
 		return false;
 	}
 
 	if (OK != bus.dev->init()) {
+		printf("ERROR- bus.dev->init() failed\n");
 		delete bus.dev;
 		bus.dev = nullptr;
 		return false;
@@ -654,7 +659,6 @@ start(enum BMP388_BUS busid)
 	}
 
 	if (!started) {
-		PX4_WARN("bus option number is %d", i);
 		PX4_ERR("driver start failed");
 		exit(1);
 	}
@@ -676,7 +680,6 @@ struct bmp388_bus_option &find_bus(enum BMP388_BUS busid)
 		}
 	}
 
-	PX4_ERR("bus %u not started", (unsigned)busid);
 	exit(1);
 }
 
