@@ -194,7 +194,6 @@ BMP388::~BMP388()
 int
 BMP388::init()
 {
-	printf("BMP388:init()\n");
 	int ret = CDev::init();
 
 	if (ret != OK) {
@@ -219,37 +218,44 @@ BMP388::init()
 	usleep(10000);
 
 	/* check  id*/
-        int result = _interface->get_reg(BMP388_ADDR_ID);
-	printf("Read chip ID: 0x%02x\n", result);
 	if (_interface->get_reg(BMP388_ADDR_ID) != BMP388_VALUE_ID) {
 		PX4_WARN("id of your baro is not: 0x%02x", BMP388_VALUE_ID);
 		return -EIO;
 	}
 
 	/* set config, recommended settings */
-	_curr_ctrl = BMP388_CTRL_P16 | BMP388_CTRL_T2;
-	/* TODO fix this _interface->set_reg(_curr_ctrl, BMP388_ADDR_CTRL); */
+	_curr_ctrl = BMP388_CTRL_MODE_P | BMP388_CTRL_MODE_T;
+
+	/* set oversampling */
+	_interface->set_reg(BMP388_CTRL_P16 | BMP388_CTRL_T2, BMP388_ADDR_OSR);
+
 	_max_mesure_ticks = USEC2TICK(BMP388_MT_INIT + BMP388_MT * (16 - 1 + 2 - 1));
-	_interface->set_reg(BMP388_CONFIG_F16, BMP388_ADDR_CONFIG);
+
+	/* configure IIR filter */
+	_interface->set_reg(BMP388_CONFIG_F15, BMP388_ADDR_CONFIG);
+
 
 	/* get calibration and pre process them*/
 	_cal = _interface->get_calibration(BMP388_ADDR_CAL);
 
-	_fcal.t1 =  _cal->t1 * powf(2,  4);
-	_fcal.t2 =  _cal->t2 * powf(2, -14);
-	_fcal.t3 =  _cal->t3 * powf(2, -34);
+	_fcal.t1 = _cal->t1 / powf(2, -8);
+	_fcal.t2 = _cal->t2 / powf(2, 30);
+	_fcal.t3 = _cal->t3 / powf(2, 48);
 
-	_fcal.p1 = _cal->p1 * (powf(2,  4) / -100000.0f);
-	_fcal.p2 = _cal->p1 * _cal->p2 * (powf(2, -31) / -100000.0f);
-	_fcal.p3 = _cal->p1 * _cal->p3 * (powf(2, -51) / -100000.0f);
+	_fcal.p1 = (_cal->p1 - powf(2, 14)) / powf(2, 20);
+	_fcal.p2 = (_cal->p2 - powf(2, 14)) / powf(2, 29);
+	_fcal.p3 = _cal->p3 / powf(2, 32);
 
-	_fcal.p4 = _cal->p4 * powf(2,  4) - powf(2, 20);
-	_fcal.p5 = _cal->p5 * powf(2, -14);
-	_fcal.p6 = _cal->p6 * powf(2, -31);
+	_fcal.p4 = _cal->p4 / powf(2, 37);
+	_fcal.p5 = _cal->p5 / powf(2, -3);
+	_fcal.p6 = _cal->p6 / powf(2, 6);
 
-	_fcal.p7 = _cal->p7 * powf(2, -4);
-	_fcal.p8 = _cal->p8 * powf(2, -19) + 1.0f;
-	_fcal.p9 = _cal->p9 * powf(2, -35);
+	_fcal.p7 = _cal->p7 / powf(2, 8);
+	_fcal.p8 = _cal->p8 / powf(2, 15);
+	_fcal.p9 = _cal->p9 / powf(2, 48);
+
+	_fcal.p10 = _cal->p10 / powf(2, 48);
+	_fcal.p11 = _cal->p11 / powf(2, 65);
 
 	/* do a first measurement cycle to populate reports with valid data */
 	sensor_baro_s brp;
@@ -448,8 +454,7 @@ BMP388::measure()
 	perf_begin(_measure_perf);
 
 	/* start measure */
-	/* TODO fix this int ret = _interface->set_reg(_curr_ctrl | BMP388_CTRL_MODE_FORCE, BMP388_ADDR_CTRL); */
-	int ret = 1;
+	int ret = _interface->set_reg(_curr_ctrl | BMP388_CTRL_MODE_FORCE, BMP388_ADDR_PWR_CTRL);
 
 	if (ret != OK) {
 		perf_count(_comms_errors);
@@ -483,21 +488,30 @@ BMP388::collect()
 	}
 
 	//convert data to number 20 bit
-	uint32_t p_raw =  data->p_msb << 12 | data->p_lsb << 4 | data->p_xlsb >> 4;
-	uint32_t t_raw =  data->t_msb << 12 | data->t_lsb << 4 | data->t_xlsb >> 4;
+	uint32_t p_raw =  data->p_msb << 16 | data->p_lsb << 8 | data->p_xlsb;
+	uint32_t t_raw =  data->t_msb << 16 | data->t_lsb << 8 | data->t_xlsb;
 
 	// Temperature
-	float ofs = (float) t_raw - _fcal.t1;
-	float t_fine = (ofs * _fcal.t3 + _fcal.t2) * ofs;
-	_T = t_fine * (1.0f / 5120.0f);
+	float pd1 = (float) t_raw - _fcal.t1;
+	float pd2 = (pd1 * _fcal.t2);
+	_T = pd2 + (pd1 * pd1) * _fcal.t3;
 
 	// Pressure
-	float tf = t_fine - 128000.0f;
-	float x1 = (tf * _fcal.p6 + _fcal.p5) * tf + _fcal.p4;
-	float x2 = (tf * _fcal.p3 + _fcal.p2) * tf + _fcal.p1;
+	pd1 = _fcal.p6 * _T;
+	pd2 = _fcal.p7 * (_T * _T);
+	float pd3 = _fcal.p8 * (_T * _T * _T);
+	float po1 = _fcal.p5 + pd1 + pd2 + pd3;
 
-	float pf = ((float) p_raw + x1) / x2;
-	_P = (pf * _fcal.p9 + _fcal.p8) * pf + _fcal.p7;
+	pd1 = _fcal.p2 * _T;
+	pd2 = _fcal.p3 * (_T * _T);
+	pd3 = _fcal.p4 * (_T * _T * _T);
+	float po2 = p_raw * (_fcal.p1 + pd1 + pd2 + pd3);
+
+	pd1 = p_raw * p_raw;
+	pd2 = _fcal.p9 + (_fcal.p10 * _T);
+	pd3 = pd1 * pd2;
+	float pd4 = pd3 + ((p_raw * p_raw * p_raw) * _fcal.p11);
+	_P = po1 + po2 + pd4;
 
 	report.temperature = _T;
 	report.pressure = _P / 100.0f; // to mbar
@@ -589,7 +603,6 @@ start_bus(struct bmp388_bus_option &bus)
 		exit(1);
 	}
 
-	printf("Constructing SPI interface on bus %d (busid: %d)\n", bus.busnum, bus.busid);
 	bmp388::IBMP388 *interface = bus.interface_constructor(bus.busnum, bus.device, bus.external);
 
 	if (interface->init() != OK) {
@@ -598,16 +611,13 @@ start_bus(struct bmp388_bus_option &bus)
 		return false;
 	}
 
-	printf("Creating BMP388 instance\n");
 	bus.dev = new BMP388(interface, bus.devpath);
 
 	if (bus.dev == nullptr) {
-		printf("ERROR- bus.dev = NULL\n");
 		return false;
 	}
 
 	if (OK != bus.dev->init()) {
-		printf("ERROR- bus.dev->init() failed\n");
 		delete bus.dev;
 		bus.dev = nullptr;
 		return false;

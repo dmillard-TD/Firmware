@@ -38,11 +38,13 @@
  */
 #pragma once
 
-#define BMP388_ADDR_CAL		0x88	/* address of 12x 2 bytes calibration data */
-#define BMP388_ADDR_DATA	0xF7	/* address of 2x 3 bytes p-t data */
+#define BMP388_ADDR_CAL		0x31	/* address of 12x 2 bytes calibration data */
+#define BMP388_ADDR_DATA	0x04	/* address of 2x 3 bytes p-t data */
 
 #define BMP388_ADDR_CMD		0x7E	/* command */
 #define BMP388_ADDR_CONFIG	0x1F	/* configuration */
+#define BMP388_ADDR_ODR		0x1D	/* output data rate select */
+#define BMP388_ADDR_OSR		0x1C	/* oversampling select */
 #define BMP388_ADDR_PWR_CTRL	0x1B	/* power control */
 #define BMP388_ADDR_IF_CTRL	0x1A	/* interface control */
 #define BMP388_ADDR_INT_CTRL	0x19	/* interrupt control */
@@ -51,37 +53,42 @@
 #define BMP388_ADDR_ERR_REG	0x02	/* error register */
 #define BMP388_ADDR_ID		0x00	/* id */
 
-#define BMP388_VALUE_ID		0x00	/* chip id */
+#define BMP388_VALUE_ID		0x50	/* chip id */
 #define BMP388_VALUE_RESET	0xB6	/* soft reset */
 
 
 #define BMP388_STATUS_MEASURING	(1<<3)	/* if in process of measure */
 #define BMP388_STATUS_COPING	(1<<0)	/* if in process of data copy */
 
-#define BMP388_CTRL_P0		(0x0<<2)		/* no p measure */
-#define BMP388_CTRL_P1		(0x1<<2)
-#define BMP388_CTRL_P2		(0x2<<2)
-#define BMP388_CTRL_P4		(0x3<<2)
-#define BMP388_CTRL_P8		(0x4<<2)
-#define BMP388_CTRL_P16		(0x5<<2)
+#define BMP388_CTRL_P1		(0x0<<0)		/* no oversample */
+#define BMP388_CTRL_P2		(0x1<<0)
+#define BMP388_CTRL_P4		(0x2<<0)
+#define BMP388_CTRL_P8		(0x3<<0)
+#define BMP388_CTRL_P16		(0x4<<0)
+#define BMP388_CTRL_P32		(0x5<<0)
 
-#define BMP388_CTRL_T0		(0x0<<5)		/* no t measure */
-#define BMP388_CTRL_T1		(0x1<<5)
-#define BMP388_CTRL_T2		(0x2<<5)
-#define BMP388_CTRL_T4		(0x3<<5)
-#define BMP388_CTRL_T8		(0x4<<5)
-#define BMP388_CTRL_T16		(0x5<<5)
+#define BMP388_CTRL_T1		(0x0<<3)		/* no oversample */
+#define BMP388_CTRL_T2		(0x1<<3)
+#define BMP388_CTRL_T3		(0x2<<3)
+#define BMP388_CTRL_T8		(0x3<<3)
+#define BMP388_CTRL_T16		(0x4<<3)
+#define BMP388_CTRL_T32		(0x5<<3)
 
-#define BMP388_CONFIG_F0	(0x0<<2)		/* no filter */
-#define BMP388_CONFIG_F2	(0x1<<2)
-#define BMP388_CONFIG_F4	(0x2<<2)
-#define BMP388_CONFIG_F8	(0x3<<2)
-#define BMP388_CONFIG_F16	(0x4<<2)
+#define BMP388_CONFIG_F0	(0x0<<1)		/* no filter */
+#define BMP388_CONFIG_F1	(0x1<<1)
+#define BMP388_CONFIG_F3	(0x2<<1)
+#define BMP388_CONFIG_F7	(0x3<<1)
+#define BMP388_CONFIG_F15	(0x4<<1)
+#define BMP388_CONFIG_F31	(0x5<<1)
+#define BMP388_CONFIG_F63	(0x6<<1)
+#define BMP388_CONFIG_F127	(0x7<<1)
 
+#define BMP388_CTRL_MODE_P	(0x1<<0)
+#define BMP388_CTRL_MODE_T	(0x1<<1)
 
-#define BMP388_CTRL_MODE_SLEEP	0x0
-#define BMP388_CTRL_MODE_FORCE	0x1		/* on demand, goes to sleep after */
-#define BMP388_CTRL_MODE_NORMAL	0x3
+#define BMP388_CTRL_MODE_SLEEP	(0x0<<4)
+#define BMP388_CTRL_MODE_FORCE	(0x1<<4)		/* on demand, goes to sleep after */
+#define BMP388_CTRL_MODE_NORMAL	(0x3<<4)
 
 #define BMP388_MT_INIT		6400	/* max measure time of initial p + t in us */
 #define BMP388_MT		2300	/* max measure time of p or t in us */
@@ -92,28 +99,30 @@ namespace bmp388
 #pragma pack(push,1)
 struct calibration_s {
 	uint16_t t1;
-	int16_t t2;
-	int16_t t3;
+	uint16_t t2;
+	int8_t t3;
 
-	uint16_t p1;
+	int16_t p1;
 	int16_t p2;
-	int16_t p3;
-	int16_t p4;
-	int16_t p5;
-	int16_t p6;
-	int16_t p7;
-	int16_t p8;
+	int8_t p3;
+	int8_t p4;
+	uint16_t p5;
+	uint16_t p6;
+	int8_t p7;
+	int8_t p8;
 	int16_t p9;
+	int8_t p10;
+	int8_t p11;
 }; //calibration data
 
 struct data_s {
-	uint8_t p_msb;
-	uint8_t p_lsb;
 	uint8_t p_xlsb;
+	uint8_t p_lsb;
+	uint8_t p_msb;
 
-	uint8_t t_msb;
-	uint8_t t_lsb;
 	uint8_t t_xlsb;
+	uint8_t t_lsb;
+	uint8_t t_msb;
 }; // data
 #pragma pack(pop)
 
@@ -131,6 +140,8 @@ struct fcalibration_s {
 	float p7;
 	float p8;
 	float p9;
+	float p10;
+	float p11;
 };
 
 class IBMP388

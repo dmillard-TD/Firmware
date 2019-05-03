@@ -100,18 +100,15 @@ bool BMP388_SPI::is_external()
 
 int BMP388_SPI::init()
 {
-	printf("SPI::init()\n");
 	return SPI::init();
 };
 
 uint8_t BMP388_SPI::get_reg(uint8_t addr)
 {
-	uint8_t cmd[2] = { (uint8_t)(addr | DIR_READ), 0}; //set MSB bit
-	printf("get_reg[0x%02x 0x%02x]\n", cmd[0], cmd[1]);
-	transfer(&cmd[0], &cmd[0], 2);
-	printf("result: 0x%02x\n", cmd[1]);
+	uint8_t cmd[3] = { (uint8_t)(addr | DIR_READ), 0}; //set MSB bit
+	transfer(&cmd[0], &cmd[0], 3);
 
-	return cmd[1];
+	return cmd[2];
 }
 
 int BMP388_SPI::set_reg(uint8_t value, uint8_t addr)
