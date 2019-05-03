@@ -35,7 +35,7 @@ px4_add_module(
 	MODULE drivers__bmp388
 	MAIN bmp388
 	COMPILE_FLAGS
-		-Wno-cast-align # TODO: fix and enable	
+		-Wno-cast-align # TODO: fix and enable
 	STACK_MAIN
 		1200
 	SRCS
