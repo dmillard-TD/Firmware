@@ -238,6 +238,14 @@ BMP388::init()
 	/* get calibration and pre process them*/
 	_cal = _interface->get_calibration(BMP388_ADDR_CAL);
 
+	printf("====== CAL =======\n");
+	printf("cal-t1: %d cal-t2: %d cal-t3: %d\n", _cal->t1, _cal->t2, _cal->t3);
+	//printf("cal-p1: %d cal-p2: %d cal-p3: %d\n", _cal->p1, _cal->p2, _cal->p3);
+	//printf("cal-p4: %d cal-p5: %d cal-p6: %d\n", _cal->p4, _cal->p5, _cal->p6);
+	//printf("cal-p7: %d cal-p8: %d cal-p9: %d\n", _cal->p7, _cal->p8, _cal->p9);
+	//printf("cal-p10: %d cal-p11: %d\n", _cal->p10, _cal->p11);
+	printf("==================\n");
+
 	_fcal.t1 = _cal->t1 / powf(2, -8);
 	_fcal.t2 = _cal->t2 / powf(2, 30);
 	_fcal.t3 = _cal->t3 / powf(2, 48);
@@ -256,6 +264,24 @@ BMP388::init()
 
 	_fcal.p10 = _cal->p10 / powf(2, 48);
 	_fcal.p11 = _cal->p11 / powf(2, 65);
+
+	printf("====== FCAL =======\n");
+	PX4_INFO_RAW("fcal-t1: %.6f fcal-t2: %.6f fcal-t3: %.6f\n", (double)_fcal.t1, (double)_fcal.t2, (double)_fcal.t3);
+	//printf("fcal-t1: %f fcal-t2: %f fcal-t3: %f\n", _fcal.t1, _fcal.t2, _fcal.t3);
+	//printf("fcal-p1: %f fcal-p2: %f fcal-p3: %f\n", _fcal.p1, _fcal.p2, _fcal.p3);
+	//printf("fcal-p4: %f fcal-p5: %f fcal-p6: %f\n", _fcal.p4, _fcal.p5, _fcal.p6);
+	//printf("fcal-p7: %f fcal-p8: %f fcal-p9: %f\n", _fcal.p7, _fcal.p8, _fcal.p9);
+	//printf("fcal-p10: %f fcal-p11: %f\n", _fcal.p10, _fcal.p11);
+	printf("==================\n");
+
+
+//====== CAL =======
+//cal-t1: 25343 cal-t2: 59754 cal-t3: 72
+//==================
+//====== FCAL =======
+//fcal-t1: 6487808.000000 fcal-t2: 0.000056 fcal-t3: 0.000000
+//==================
+
 
 	/* do a first measurement cycle to populate reports with valid data */
 	sensor_baro_s brp;
@@ -491,10 +517,16 @@ BMP388::collect()
 	uint32_t p_raw =  data->p_msb << 16 | data->p_lsb << 8 | data->p_xlsb;
 	uint32_t t_raw =  data->t_msb << 16 | data->t_lsb << 8 | data->t_xlsb;
 
+	//printf("read: %02x %02x %02x\n", data->t_msb, data->t_lsb, data->t_xlsb);
+	//printf("T_raw: %d\n", t_raw);
+
 	// Temperature
 	float pd1 = (float) t_raw - _fcal.t1;
 	float pd2 = (pd1 * _fcal.t2);
+	//printf("pd1: %.6f pd2: %.6f\n", (double)pd1, (double)pd2);
+
 	_T = pd2 + (pd1 * pd1) * _fcal.t3;
+	//printf("T= %.6f\n", (double)_T);
 
 	// Pressure
 	pd1 = _fcal.p6 * _T;
@@ -512,6 +544,7 @@ BMP388::collect()
 	pd3 = pd1 * pd2;
 	float pd4 = pd3 + ((p_raw * p_raw * p_raw) * _fcal.p11);
 	_P = po1 + po2 + pd4;
+
 
 	report.temperature = _T;
 	report.pressure = _P / 100.0f; // to mbar

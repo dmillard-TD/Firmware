@@ -102,13 +102,13 @@ struct calibration_s {
 }; //calibration data
 
 struct data_s {
-	uint8_t p_msb;
-	uint8_t p_lsb;
 	uint8_t p_xlsb;
+	uint8_t p_lsb;
+	uint8_t p_msb;
 
-	uint8_t t_msb;
-	uint8_t t_lsb;
 	uint8_t t_xlsb;
+	uint8_t t_lsb;
+	uint8_t t_msb;
 }; // data
 #pragma pack(pop)
 
