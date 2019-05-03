@@ -124,7 +124,6 @@ CDev::init()
 
 	// now register the driver
 	if (_devname != nullptr) {
-		printf("devname: %s\n", _devname);
 		ret = register_driver(_devname, &fops, 0666, (void *)this);
 
 		if (ret == PX4_OK) {
