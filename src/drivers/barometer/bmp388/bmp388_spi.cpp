@@ -53,11 +53,13 @@
 #pragma pack(push,1)
 struct spi_data_s {
 	uint8_t addr;
+	uint8_t dummy; /* BMP388 inserts a dummy byte in the transaction */
 	struct bmp388::data_s data;
 };
 
 struct spi_calibration_s {
 	uint8_t addr;
+	uint8_t dummy; /* BMP388 inserts a dummy byte in the transaction */
 	struct bmp388::calibration_s cal;
 };
 #pragma pack(pop)
@@ -105,7 +107,7 @@ int BMP388_SPI::init()
 
 uint8_t BMP388_SPI::get_reg(uint8_t addr)
 {
-	uint8_t cmd[3] = { (uint8_t)(addr | DIR_READ), 0}; //set MSB bit
+	uint8_t cmd[3] = { (uint8_t)(addr | DIR_READ), 0, 0}; //set MSB bit
 	transfer(&cmd[0], &cmd[0], 3);
 
 	return cmd[2];
