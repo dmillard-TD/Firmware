@@ -105,6 +105,7 @@ BMI088_accel::~BMI088_accel()
 int
 BMI088_accel::init()
 {
+	printf("BMI088_accel init()\n");
 	/* do SPI init (and probe) first */
 	int ret = SPI::init();
 
@@ -124,6 +125,7 @@ BMI088_accel::init()
 	ret = reset();
 
 	if (ret != OK) {
+		printf("reset failed\n");
 		return ret;
 	}
 
@@ -166,6 +168,7 @@ BMI088_accel::init()
 
 int BMI088_accel::reset()
 {
+	printf("reset()\n");
 	write_reg(BMI088_ACC_SOFTRESET, BMI088_SOFT_RESET);//Soft-reset
 	up_udelay(5000);
 
@@ -516,6 +519,7 @@ BMI088_accel::measure()
 
 	if (hrt_absolute_time() < _reset_wait) {
 		// we're waiting for a reset to complete
+		printf("reset timeout\n");
 		return;
 	}
 
@@ -529,6 +533,8 @@ BMI088_accel::measure()
 	/* start measuring */
 	perf_begin(_sample_perf);
 
+	printf("measure()\n");
+
 	/*
 	 * Fetch the full set of measurements from the BMI088 in one pass.
 	 */
@@ -538,6 +544,7 @@ BMI088_accel::measure()
 		return;
 	}
 
+	printf("measure: check_registers()\n");
 	check_registers();
 
 	/* Extracting accel data from the read data */
@@ -608,6 +615,7 @@ BMI088_accel::measure()
 	// whether it has had failures
 	arb.error_count = perf_event_count(_bad_transfers) + perf_event_count(_bad_registers);
 
+	printf("measure: post1()\n");
 	/*
 	 * 1) Scale raw value to SI units using scaling from datasheet.
 	 * 2) Subtract static offset (in SI units)
@@ -649,6 +657,7 @@ BMI088_accel::measure()
 
 	arb.scaling = _accel_range_scale;
 
+	printf("measure: calculating temperature()\n");
 	/*
 	 * Temperature is reported as Eight-bit 2’s complement sensor temperature value
 	 * with 0.5 °C/LSB sensitivity and an offset of 23.0 °C

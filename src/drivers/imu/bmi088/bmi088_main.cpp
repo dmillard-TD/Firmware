@@ -90,6 +90,9 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 		if (external_bus) {
 #if defined(PX4_SPI_BUS_EXT) && defined(PX4_SPIDEV_EXT_BMI)
 			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXT, path_accel, PX4_SPIDEV_EXT_BMI, rotation);
+#elif defined(PX4_SPI_BUS_EXTERNAL1) && defined(PX4_SPIDEV_BMI088_ACC)
+			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_accel, PX4_SPIDEV_BMI088_ACC, rotation);
+			printf("External BMI088 accel selected\n");
 #else
 			errx(0, "External SPI not available");
 #endif
@@ -99,10 +102,12 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 		}
 
 		if (*g_dev_acc_ptr == nullptr) {
+			printf("fail instance\n");
 			goto fail_accel;
 		}
 
 		if (OK != (*g_dev_acc_ptr)->init()) {
+			printf("fail init\n");
 			goto fail_accel;
 		}
 
@@ -110,10 +115,12 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 		fd_acc = open(path_accel, O_RDONLY);
 
 		if (fd_acc < 0) {
+			printf("fail open: %s\n", path_accel);
 			goto fail_accel;
 		}
 
 		if (ioctl(fd_acc, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0) {
+			printf("fail ioctl()\n");
 			goto fail_accel;
 		}
 
@@ -130,6 +137,9 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 		if (external_bus) {
 #if defined(PX4_SPI_BUS_EXT) && defined(PX4_SPIDEV_EXT_BMI)
 			*g_dev_ptr = new BMI088_gyro(PX4_SPI_BUS_EXT, path_gyro, PX4_SPIDEV_EXT_BMI, rotation);
+#elif defined(PX4_SPI_BUS_EXTERNAL1) && defined(PX4_SPIDEV_BMI088_GYR)
+			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_gyro, PX4_SPIDEV_BMI088_GYR, rotation);
+			printf("External BMI088 gyro selected\n");
 #else
 			errx(0, "External SPI not available");
 #endif
