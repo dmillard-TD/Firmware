@@ -107,7 +107,7 @@
 #define BMI088_ACC_FIFO_DATA        0x3F
 
 // BMI088 Accelerometer Chip-Id
-#define BMI088_ACC_WHO_AM_I         0xFA
+#define BMI088_ACC_WHO_AM_I         0x1E
 
 // DLPF filter bandwidth settings
 #define BMI088_ACCEL_BW_7_81      (1<<3) | (0<<2) | (0<<1) | (0<<0)

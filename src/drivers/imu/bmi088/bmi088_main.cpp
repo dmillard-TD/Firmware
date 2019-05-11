@@ -91,7 +91,8 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 #if defined(PX4_SPI_BUS_EXT) && defined(PX4_SPIDEV_EXT_BMI)
 			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXT, path_accel, PX4_SPIDEV_EXT_BMI, rotation);
 #elif defined(PX4_SPI_BUS_EXTERNAL1) && defined(PX4_SPIDEV_BMI088_ACC)
-			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_accel, PX4_SPIDEV_BMI088_ACC, rotation);
+			//*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_accel, PX4_SPIDEV_BMI088_ACC, rotation);
+			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_accel, PX4_SPIDEV_EXTERNAL1_1, rotation);
 			printf("External BMI088 accel selected\n");
 #else
 			errx(0, "External SPI not available");
@@ -138,7 +139,8 @@ start(bool external_bus, enum Rotation rotation, enum sensor_type sensor)
 #if defined(PX4_SPI_BUS_EXT) && defined(PX4_SPIDEV_EXT_BMI)
 			*g_dev_ptr = new BMI088_gyro(PX4_SPI_BUS_EXT, path_gyro, PX4_SPIDEV_EXT_BMI, rotation);
 #elif defined(PX4_SPI_BUS_EXTERNAL1) && defined(PX4_SPIDEV_BMI088_GYR)
-			*g_dev_acc_ptr = new BMI088_accel(PX4_SPI_BUS_EXTERNAL1, path_gyro, PX4_SPIDEV_BMI088_GYR, rotation);
+			//*g_dev_acc_ptr = new BMI088_gyro(PX4_SPI_BUS_EXTERNAL1, path_gyro, PX4_SPIDEV_BMI088_GYR, rotation);
+			*g_dev_gyr_ptr = new BMI088_gyro(PX4_SPI_BUS_EXTERNAL1, path_gyro, PX4_SPIDEV_EXTERNAL1_2, rotation);
 			printf("External BMI088 gyro selected\n");
 #else
 			errx(0, "External SPI not available");
