@@ -51,13 +51,31 @@
 
 // BMI088 Accel registers
 #define BMI088_ACC_CHIP_ID          0x00
-#define BMI088_ACC_X_L              0x02
-#define BMI088_ACC_X_H              0x03
-#define BMI088_ACC_Y_L              0x04
-#define BMI088_ACC_Y_H              0x05
-#define BMI088_ACC_Z_L              0x06
-#define BMI088_ACC_Z_H              0x07
-#define BMI088_ACC_TEMP             0x08
+#define BMI088_ACC_ERR_REG          0x02
+#define BMI088_ACC_STATUS           0x03
+#define BMI088_ACC_X_L              0x12
+#define BMI088_ACC_X_H              0x13
+#define BMI088_ACC_Y_L              0x14
+#define BMI088_ACC_Y_H              0x15
+#define BMI088_ACC_Z_L              0x16
+#define BMI088_ACC_Z_H              0x17
+#define BMI088_SENSORTIME_0         0x18
+#define BMI088_SENSORTIME_1         0x19
+#define BMI088_SENSORTIME_2         0x1A
+#define BMI088_ACC_INT_STAT_1       0x1D
+#define BMI088_ACC_TEMP_H           0x22
+#define BMI088_ACC_TEMP_L           0x23
+#define BMI088_ACC_CONF             0x40
+#define BMI088_ACC_RANGE            0x41
+#define BMI088_INT1_IO_CTRL         0x53
+#define BMI088_INT2_IO_CTRL         0x54
+#define BMI088_INT_MAP_DATA         0x58
+#define BMI088_ACC_SELF_TEST        0x6D
+#define BMI088_ACC_PWR_CONF         0x7C
+#define BMI088_ACC_PWR_CTRL         0x7D
+#define BMI088_ACC_SOFTRESET        0x7E
+
+/*  Old defines
 #define BMI088_ACC_INT_STATUS_0     0x09
 #define BMI088_ACC_INT_STATUS_1     0x0A
 #define BMI088_ACC_INT_STATUS_2     0x0B
@@ -105,31 +123,39 @@
 #define BMI088_ACC_TRIM_GP1         0x3C
 #define BMI088_ACC_FIFO_CONFIG_1    0x3E
 #define BMI088_ACC_FIFO_DATA        0x3F
+*/
 
 // BMI088 Accelerometer Chip-Id
 #define BMI088_ACC_WHO_AM_I         0x1E
 
-// DLPF filter bandwidth settings
-#define BMI088_ACCEL_BW_7_81      (1<<3) | (0<<2) | (0<<1) | (0<<0)
-#define BMI088_ACCEL_BW_15_63     (1<<3) | (0<<2) | (0<<1) | (1<<0)
-#define BMI088_ACCEL_BW_31_25     (1<<3) | (0<<2) | (1<<1) | (0<<0)
-#define BMI088_ACCEL_BW_62_5      (1<<3) | (0<<2) | (1<<1) | (1<<0)
-#define BMI088_ACCEL_BW_125       (1<<3) | (1<<2) | (0<<1) | (0<<0)
-#define BMI088_ACCEL_BW_250       (1<<3) | (1<<2) | (0<<1) | (1<<0)
-#define BMI088_ACCEL_BW_500       (1<<3) | (1<<2) | (1<<1) | (0<<0)
-#define BMI088_ACCEL_BW_1000      (1<<3) | (1<<2) | (1<<1) | (1<<0)
+// Used to switch accelerometer on/off
+#define BMI088_PWR_CTRL_ON          0x04
+#define BMI088_PWR_CTRL_OFF         0x00
 
-//BMI088_ACC_PMU_LPW     0x11
-#define BMI088_ACCEL_NORMAL         (0<<7) | (0<<6) | (0<<5)
-#define BMI088_ACCEL_DEEP_SUSPEND   (0<<7) | (0<<6) | (1<<5)
-#define BMI088_ACCEL_LOW_POWER      (0<<7) | (1<<6) | (0<<5)
-#define BMI088_ACCEL_SUSPEND        (1<<7) | (0<<6) | (0<<5)
+// Output data rate     0x40
+#define BMI088_ODR_12p5             0x05
+#define BMI088_ODR_25               0x06
+#define BMI088_ODR_50               0x07
+#define BMI088_ODR_100              0x08
+#define BMI088_ODR_200              0x09
+#define BMI088_ODR_400              0x0A
+#define BMI088_ODR_800              0x0B
+#define BMI088_ODR_1600             0x0C
 
-//BMI088_ACC_RANGE        0x0F
-#define BMI088_ACCEL_RANGE_2_G      (0<<3) | (0<<2) | (1<<1) | (1<<0)
-#define BMI088_ACCEL_RANGE_4_G      (0<<3) | (1<<2) | (0<<1) | (1<<0)
-#define BMI088_ACCEL_RANGE_8_G      (1<<3) | (0<<2) | (0<<1) | (0<<0)
-#define BMI088_ACCEL_RANGE_16_G     (1<<3) | (1<<2) | (0<<1) | (0<<0)
+// Define oversampling and filter bandwidth  0x40
+#define BMI088_BWP_OSR4             (0x08<<4)
+#define BMI088_BWP_OSR2             (0x09<<4)
+#define BMI088_BWP_NORMAL           (0x0A<<4)
+
+// BMI088 power modes    0x7C
+#define BMI088_ACC_PWR_ACTIVE       0x00
+#define BMI088_ACC_PWR_SUSPEND      0x03
+
+//BMI088_ACC_RANGE        0x41
+#define BMI088_ACCEL_RANGE_3_G      0x00
+#define BMI088_ACCEL_RANGE_6_G      0x01
+#define BMI088_ACCEL_RANGE_12_G     0x02
+#define BMI088_ACCEL_RANGE_24_G     0x03
 
 //BMI088_ACC_INT_EN_1      0x17
 #define BMI088_ACC_DRDY_INT_EN      (1<<4)
@@ -138,10 +164,10 @@
 #define BMI088_ACC_DRDY_INT1        (1<<0)
 
 // Default and Max values
-#define BMI088_ACCEL_DEFAULT_RANGE_G		16
-#define BMI088_ACCEL_DEFAULT_RATE           1000
-#define BMI088_ACCEL_MAX_RATE               1000
-#define BMI088_ACCEL_MAX_PUBLISH_RATE       280
+#define BMI088_ACCEL_DEFAULT_RANGE_G	0x02 
+#define BMI088_ACCEL_DEFAULT_RATE       1000
+#define BMI088_ACCEL_MAX_RATE           1000
+#define BMI088_ACCEL_MAX_PUBLISH_RATE   280
 
 #define BMI088_ACCEL_DEFAULT_DRIVER_FILTER_FREQ 50
 
@@ -200,7 +226,7 @@ private:
 	// this is used to support runtime checking of key
 	// configuration registers to detect SPI bus errors and sensor
 	// reset
-#define BMI088_ACCEL_NUM_CHECKED_REGISTERS 5
+#define BMI088_ACCEL_NUM_CHECKED_REGISTERS 3
 	static const uint8_t    _checked_registers[BMI088_ACCEL_NUM_CHECKED_REGISTERS];
 	uint8_t         _checked_values[BMI088_ACCEL_NUM_CHECKED_REGISTERS];
 	uint8_t         _checked_bad[BMI088_ACCEL_NUM_CHECKED_REGISTERS];

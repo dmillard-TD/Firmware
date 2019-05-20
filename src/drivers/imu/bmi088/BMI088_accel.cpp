@@ -40,10 +40,8 @@
   that ADDR_WHO_AM_I must be first in the list.
  */
 const uint8_t BMI088_accel::_checked_registers[BMI088_ACCEL_NUM_CHECKED_REGISTERS] = {    BMI088_ACC_CHIP_ID,
-											  BMI088_ACC_BW,
+											  BMI088_ACC_CONF,
 											  BMI088_ACC_RANGE,
-											  BMI088_ACC_INT_EN_1,
-											  BMI088_ACC_INT_MAP_1,
 										     };
 
 BMI088_accel::BMI088_accel(int bus, const char *path_accel, uint32_t device, enum Rotation rotation) :
@@ -168,15 +166,16 @@ int BMI088_accel::reset()
 	write_reg(BMI088_ACC_SOFTRESET, BMI088_SOFT_RESET);//Soft-reset
 	up_udelay(5000);
 
-	write_checked_reg(BMI088_ACC_BW,    BMI088_ACCEL_BW_500); //Write accel bandwidth (DLPF)
-	write_checked_reg(BMI088_ACC_RANGE,     BMI088_ACCEL_RANGE_2_G);//Write range
-	write_checked_reg(BMI088_ACC_INT_EN_1,      BMI088_ACC_DRDY_INT_EN); //Enable DRDY interrupt
-	write_checked_reg(BMI088_ACC_INT_MAP_1,     BMI088_ACC_DRDY_INT1); //Map DRDY interrupt on pin INT1
+	write_checked_reg(BMI088_ACC_CONF, BMI088_BWP_NORMAL | BMI088_ODR_1600); //Write accel bandwidth and OS rate
+	write_checked_reg(BMI088_ACC_RANGE, BMI088_ACCEL_RANGE_3_G); //Write range
+	//write_checked_reg(BMI088_ACC_INT_EN_1, BMI088_ACC_DRDY_INT_EN); //Enable DRDY interrupt
+	//write_checked_reg(BMI088_ACC_INT_MAP_1, BMI088_ACC_DRDY_INT1); //Map DRDY interrupt on pin INT1
 
 	set_accel_range(BMI088_ACCEL_DEFAULT_RANGE_G);//set accel range
 
 	//Enable Accelerometer in normal mode
-	write_reg(BMI088_ACC_PMU_LPW, BMI088_ACCEL_NORMAL);
+	write_reg(BMI088_ACC_PWR_CTRL, BMI088_PWR_CTRL_ON); // Switch on accelerometer
+	write_reg(BMI088_ACC_PWR_CONF, BMI088_ACC_PWR_ACTIVE);
 	up_udelay(1000);
 
 	uint8_t retries = 10;
@@ -388,11 +387,13 @@ BMI088_accel::write_checked_reg(unsigned reg, uint8_t value)
 	}
 }
 
+
+/* TODO this function needs to be rewritten */
 int
 BMI088_accel::set_accel_range(unsigned max_g)
 {
 	uint8_t setbits = 0;
-	uint8_t clearbits = BMI088_ACCEL_RANGE_2_G | BMI088_ACCEL_RANGE_16_G;
+	uint8_t clearbits = BMI088_ACCEL_RANGE_3_G | BMI088_ACCEL_RANGE_12_G;
 	float lsb_per_g;
 	float max_accel_g;
 
@@ -402,22 +403,22 @@ BMI088_accel::set_accel_range(unsigned max_g)
 
 	if (max_g <= 2) {
 		max_accel_g = 2;
-		setbits |= BMI088_ACCEL_RANGE_2_G;
+		setbits |= BMI088_ACCEL_RANGE_3_G;
 		lsb_per_g = 1024;
 
 	} else if (max_g <= 4) {
 		max_accel_g = 4;
-		setbits |= BMI088_ACCEL_RANGE_4_G;
+		setbits |= BMI088_ACCEL_RANGE_6_G;
 		lsb_per_g = 512;
 
 	} else if (max_g <= 8) {
 		max_accel_g = 8;
-		setbits |= BMI088_ACCEL_RANGE_8_G;
+		setbits |= BMI088_ACCEL_RANGE_12_G;
 		lsb_per_g = 256;
 
 	} else if (max_g <= 16) {
 		max_accel_g = 16;
-		setbits |= BMI088_ACCEL_RANGE_16_G;
+		setbits |= BMI088_ACCEL_RANGE_24_G;
 		lsb_per_g = 128;
 
 	} else {
@@ -525,7 +526,7 @@ BMI088_accel::measure()
 		int16_t     accel_x;
 		int16_t     accel_y;
 		int16_t     accel_z;
-		int8_t     temp;
+		int16_t     temp;
 	} report;
 
 	/* start measuring */
@@ -563,7 +564,8 @@ BMI088_accel::measure()
 	report.accel_z = ((int16_t)msblsb >> 4); /* Data in Z axis */
 
 	// Byte
-	report.temp = accel_data[index];
+	report.temp = accel_data[index++] << 8;
+	report.temp += accel_data[index] / 32;
 
 	// Checking the status of new data
 	if ((!status_x) || (!status_y) || (!status_z)) {
@@ -653,10 +655,10 @@ BMI088_accel::measure()
 
 	printf("measure: calculating temperature()\n");
 	/*
-	 * Temperature is reported as Eight-bit 2’s complement sensor temperature value
-	 * with 0.5 °C/LSB sensitivity and an offset of 23.0 °C
+	 * Temperature is reported as eleven-bit 2’s complement sensor temperature value
+	 * with 0.125 °C/LSB sensitivity and an offset of 23.0 °C
 	 */
-	_last_temperature = (report.temp * 0.5f) + 23.0f;
+	_last_temperature = (report.temp * 0.125f) + 23.0f;
 	arb.temperature = _last_temperature;
 
 	arb.device_id = _device_id.devid;
@@ -733,15 +735,6 @@ BMI088_accel::print_registers()
 	v = read_reg(reg);
 	printf("Accel Range: %02x:%02x ", (unsigned)reg, (unsigned)v);
 	printf("\n");
-
-	reg = _checked_registers[index++];
-	v = read_reg(reg);
-	printf("Accel Int-en-1: %02x:%02x ", (unsigned)reg, (unsigned)v);
-	printf("\n");
-
-	reg = _checked_registers[index++];
-	v = read_reg(reg);
-	printf("Accel Int-Map-1: %02x:%02x ", (unsigned)reg, (unsigned)v);
 
 	printf("\n");
 }
